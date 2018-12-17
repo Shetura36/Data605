@@ -7,15 +7,11 @@ output:
     keep_md: yes
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
+
 
 ---
 
-```{r echo=FALSE}
-library(knitr)
-```
+
 
 ### <span Style="color:blue">Problem 1</span>
 
@@ -39,7 +35,8 @@ Calculate as a minimum the below probabilities a through c.  Assume the small le
 
 #### Assign `X` and `Y` values to their respective vectors. 
 
-```{r}
+
+```r
 X <- c(9.5, 3.7, 11.7, 7.4, 5.3, 7.4, 7.4, 8.6, 9.1, 11.4, 8.4, 7.3, 11.3, 4.4, 9.3, 10.9, 10.9, 7.7, 7.7, 11.5)
 
 Y <- c(28.4, 21.5, 20.8, 22.2, 21.6, 21.8, 25.2, 22.5, 21.1, 21.7, 21.4, 20.8, 23.0, 17.4, 21.3, 15.1, 17.8, 26.4, 21.6, 22.5)
@@ -50,9 +47,22 @@ Y <- c(28.4, 21.5, 20.8, 22.2, 21.6, 21.8, 25.2, 22.5, 21.1, 21.7, 21.4, 20.8, 2
 - The 3rd quartile (Q3) of `X` is 10.90. 
 - There are 20 values in `X`. 
 
-```{r}
+
+```r
 summary(X)
+```
+
+```
+##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+##   3.700   7.400   8.500   8.545  10.900  11.700
+```
+
+```r
 length(X)
+```
+
+```
+## [1] 20
 ```
 
 
@@ -61,9 +71,22 @@ length(X)
 - The 1st quartile (Q1) of of `Y` is 21.02.
 - There are 20 values in `Y`. 
 
-```{r}
+
+```r
 summary(Y)
+```
+
+```
+##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+##   15.10   21.02   21.60   21.70   22.50   28.40
+```
+
+```r
 length(Y)
+```
+
+```
+## [1] 20
 ```
 
 ### Plot of `X` and `Y`. 
@@ -73,15 +96,7 @@ length(Y)
 - The red horizontal line is `Y = 21.02`, which is the 1st quartile of `Y`.
 
 
-```{r echo=FALSE}
-plot(X,Y)
-
-X_Q3 <- 10.90
-Y_Q1 <- 21.02
-
-abline(v = X_Q3, col="blue")
-abline(h = Y_Q1, col="red")
-```
+![](STinapunan_Data605_Problem1_FINAL_files/figure-html/unnamed-chunk-5-1.png)<!-- -->
 
 
 ### Answers to Probabilities
@@ -103,10 +118,41 @@ Please see below for details of calculations.
 
 #### <span style="color:blue">Table A: Shows all 20 (x,y) points in the dataset</span>
 
-```{r}
+
+```r
 XY <- data.frame(X,Y)
 kable(XY)
+```
+
+    X      Y
+-----  -----
+  9.5   28.4
+  3.7   21.5
+ 11.7   20.8
+  7.4   22.2
+  5.3   21.6
+  7.4   21.8
+  7.4   25.2
+  8.6   22.5
+  9.1   21.1
+ 11.4   21.7
+  8.4   21.4
+  7.3   20.8
+ 11.3   23.0
+  4.4   17.4
+  9.3   21.3
+ 10.9   15.1
+ 10.9   17.8
+  7.7   26.4
+  7.7   21.6
+ 11.5   22.5
+
+```r
 nrow(XY)
+```
+
+```
+## [1] 20
 ```
 
 <br/> 
@@ -119,27 +165,72 @@ Below calculates the conditional probability that X > 10.90 given Y > 21.02.
 
 #### <span style="color:blue">Table B: Shows the 15 (x,y) points where Y > 21.02 </span>
 
-```{r}
+
+```r
 XY_subset1 <- subset(XY, Y > 21.02, select=c("X", "Y"))
 rownames(XY_subset1) <- c()
 kable(XY_subset1, row.names=NA)
+```
+
+    X      Y
+-----  -----
+  9.5   28.4
+  3.7   21.5
+  7.4   22.2
+  5.3   21.6
+  7.4   21.8
+  7.4   25.2
+  8.6   22.5
+  9.1   21.1
+ 11.4   21.7
+  8.4   21.4
+ 11.3   23.0
+  9.3   21.3
+  7.7   26.4
+  7.7   21.6
+ 11.5   22.5
+
+```r
 nrow(XY_subset1)
+```
+
+```
+## [1] 15
 ```
 
 
 #### <span style="color:blue">Table C: Shows the 3 (x,y) points where X > 10.90 and Y > 21.02 </span>
 
-```{r}
+
+```r
 XY_subset2 <- subset(XY, X > 10.90 & Y > 21.02, select=c("X", "Y"))
 rownames(XY_subset2) <- c()
 kable(XY_subset2)
+```
+
+    X      Y
+-----  -----
+ 11.4   21.7
+ 11.3   23.0
+ 11.5   22.5
+
+```r
 nrow(XY_subset2)
+```
+
+```
+## [1] 3
 ```
 
 #### <span style="color:green">Answer: So, P(X > 10.90 | Y > 21.02) is 3/15 or 1/5 or 0.20. </span>
 
-```{r}
+
+```r
 nrow(XY_subset2)/nrow(XY_subset1)
+```
+
+```
+## [1] 0.2
 ```
 
 <br/>
@@ -157,8 +248,13 @@ We also know that there is a total of <b>20</b> points in the `XY` universe. See
 
 #### <span style="color:green">Answer: So, P(X > 10.90 *and* Y > 21.02) is 3/20 or 0.15. 
 
-```{r}
+
+```r
 nrow(XY_subset2)/nrow(XY)
+```
+
+```
+## [1] 0.15
 ```
 
 <br/> 
@@ -171,19 +267,49 @@ Below calculates the conditional probability that X < 10.90 given that Y > 21.02
 
 #### <span style="color:blue">Table D: Shows the 12 (x,y) points where X < 10.90 and Y > 21.02 </span>
 
-```{r}
+
+```r
 XY_subset3 <- subset(XY, X < 10.90 & Y > 21.02, select=c("X", "Y"))
 rownames(XY_subset3) <- c()
 kable(XY_subset3)
+```
+
+
+
+   X      Y
+----  -----
+ 9.5   28.4
+ 3.7   21.5
+ 7.4   22.2
+ 5.3   21.6
+ 7.4   21.8
+ 7.4   25.2
+ 8.6   22.5
+ 9.1   21.1
+ 8.4   21.4
+ 9.3   21.3
+ 7.7   26.4
+ 7.7   21.6
+
+```r
 nrow(XY_subset3)
+```
+
+```
+## [1] 12
 ```
 
 In part (a) above, we already know that there are 15 (x,y) points where Y > 21.02. See *Table B*. 
 
 #### <span style="color:green">Answer: So, P(X < 10.90 | Y > 21.02)	is 12/15 or 0.80. </span>
 
-```{r}
+
+```r
 nrow(XY_subset3)/nrow(XY_subset1)
+```
+
+```
+## [1] 0.8
 ```
 
 ---
@@ -192,7 +318,8 @@ nrow(XY_subset3)/nrow(XY_subset1)
 
 #### <span style="color:blue">Table E: Shows count of each segment </span>
 
-```{r}
+
+```r
 Y_less_or_equal_Q1 <- subset(XY, Y <= 21.02, select=c("X", "Y"))
 Y_greater_Q1 <- subset(XY, Y > 21.02, select=c("X", "Y"))
 row1 <- c(nrow(subset(Y_less_or_equal_Q1, X <= 10.90)), nrow(subset(Y_less_or_equal_Q1, X > 10.90)))
@@ -204,6 +331,12 @@ rownames(rows) <- c('X <= 1st quartile', 'X > 1st quartile', 'Total')
 colnames(rows) <- c('Y <= 3rd quartile', 'Y > 3rd quartile', 'Total')
 kable(rows)
 ```
+
+                     Y <= 3rd quartile   Y > 3rd quartile   Total
+------------------  ------------------  -----------------  ------
+X <= 1st quartile                    4                  1       5
+X > 1st quartile                    12                  3      15
+Total                               16                  4      20
 
 ---
 
@@ -227,34 +360,76 @@ Check mathematically, and then evaluate by running a Chi Square test for indepen
 - The red horizontal line is `Y = 21.02`,  which is the 1st quartile of `Y`. 
 
 
-```{r echo=FALSE}
-plot(X,Y)
-
-X_Q1 <- 7.40
-Y_Q1 <- 21.02
-
-abline(v = X_Q1, col="blue")
-abline(h = Y_Q1, col="red")
-```
+![](STinapunan_Data605_Problem1_FINAL_files/figure-html/unnamed-chunk-14-1.png)<!-- -->
 
 #### <span style="color:blue">Table F: Shows the 13 (x,y) points where X > 7.40 </span>
 
-```{r}
+
+```r
 A <- subset(XY, X > 7.40, select=c("X", "Y"))
 rownames(A) <- c()
 kable(A)
+```
+
+    X      Y
+-----  -----
+  9.5   28.4
+ 11.7   20.8
+  8.6   22.5
+  9.1   21.1
+ 11.4   21.7
+  8.4   21.4
+ 11.3   23.0
+  9.3   21.3
+ 10.9   15.1
+ 10.9   17.8
+  7.7   26.4
+  7.7   21.6
+ 11.5   22.5
+
+```r
 nrow(A)
+```
+
+```
+## [1] 13
 ```
 
 <br/> 
 
 #### <span style="color:blue">Table G: Shows the 15 (x,y) points where X > 7.40 </span>
 
-```{r}
+
+```r
 B <- subset(XY, Y > 21.02, select=c("X", "Y"))
 rownames(B) <- c()
 kable(B)
+```
+
+    X      Y
+-----  -----
+  9.5   28.4
+  3.7   21.5
+  7.4   22.2
+  5.3   21.6
+  7.4   21.8
+  7.4   25.2
+  8.6   22.5
+  9.1   21.1
+ 11.4   21.7
+  8.4   21.4
+ 11.3   23.0
+  9.3   21.3
+  7.7   26.4
+  7.7   21.6
+ 11.5   22.5
+
+```r
 nrow(B)
+```
+
+```
+## [1] 15
 ```
 
 
@@ -262,29 +437,65 @@ nrow(B)
 
 #### <span style="color:blue">Table H: Shows the 10 (x,y) points where X > 7.40 and Y > 21.02 </span>
 
-```{r}
+
+```r
 AB <- subset(XY, X > 7.40 & Y > 21.02, select=c("X", "Y"))
 rownames(AB) <- c()
 kable(AB)
+```
+
+    X      Y
+-----  -----
+  9.5   28.4
+  8.6   22.5
+  9.1   21.1
+ 11.4   21.7
+  8.4   21.4
+ 11.3   23.0
+  9.3   21.3
+  7.7   26.4
+  7.7   21.6
+ 11.5   22.5
+
+```r
 nrow(AB)
+```
+
+```
+## [1] 10
 ```
 
 #### P(A) = 13/20 or 0.65
 
-```{r}
+
+```r
 nrow(A)/nrow(XY)
+```
+
+```
+## [1] 0.65
 ```
 
 #### P(B) = 15/20 or 0.75
 
-```{r}
+
+```r
 nrow(B)/nrow(XY)
+```
+
+```
+## [1] 0.75
 ```
 
 #### P(AB) = 10/20 = 0.50
 
-```{r}
+
+```r
 nrow(AB)/nrow(XY)
+```
+
+```
+## [1] 0.5
 ```
 
 #### Does P(AB)=P(A)P(B)?
@@ -295,10 +506,15 @@ P(A)P(B) = 0.4875
 #### <span style="color:green">As you can see P(AB) != P(A)P(B), which means that A and B are not independent. So, splitting the data in this fashion does not make them independent, </span>
 
 
-```{r}
+
+```r
 prob_A <- 0.65
 prob_B <- 0.75
 prob_A * prob_B
+```
+
+```
+## [1] 0.4875
 ```
 
 <br/>
@@ -314,7 +530,8 @@ A data point (x,y) is in `A` if X > 7.40 otherwise it's in `Not-A`. A data point
 
 #### <span style="color:blue">Table H: Contingency table by 2 Categories</span>
 
-```{r}
+
+```r
 XY$A[XY$X > 7.40] <- 'A'
 XY$B[XY$Y > 21.02] <- 'B'
 XY$A[XY$X <= 7.40] <- 'Not-A'
@@ -323,6 +540,11 @@ AB_table <- table(XY$A, XY$B)
 kable(AB_table)
 ```
 
+          B   Not-B
+------  ---  ------
+A        10       3
+Not-A     5       2
+
 The null hypothesis is category 1 and category 2 are independent (no relationship exists between the 2 categories) 
 
 The alternative is category 1 and category 2 are not independent (a relationship exists between the 2 categories) 
@@ -330,9 +552,25 @@ The alternative is category 1 and category 2 are not independent (a relationship
 The significance level is 0.05. 
 
 
-```{r}
+
+```r
 result <- chisq.test(AB_table)
+```
+
+```
+## Warning in chisq.test(AB_table): Chi-squared approximation may be incorrect
+```
+
+```r
 result
+```
+
+```
+## 
+## 	Pearson's Chi-squared test with Yates' continuity correction
+## 
+## data:  AB_table
+## X-squared = 0, df = 1, p-value = 1
 ```
 
 
@@ -340,14 +578,30 @@ The results of the Pearson's chi-squared test shows a chi-square statistic of 0,
 
 #### Expected data: 
 
-```{r}
+
+```r
 result$expected
+```
+
+```
+##        
+##            B Not-B
+##   A     9.75  3.25
+##   Not-A 5.25  1.75
 ```
 
 #### Actual data: 
 
-```{r}
+
+```r
 AB_table
+```
+
+```
+##        
+##          B Not-B
+##   A     10     3
+##   Not-A  5     2
 ```
 
 The p-value is 1, which is greater than the significance level of 0.05, which means that we fail to reject the null hypothesis that the 2 categories are independent. 
