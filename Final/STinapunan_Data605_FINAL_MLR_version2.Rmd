@@ -1,0 +1,673 @@
+---
+title: "Data 605 FINAL - Problem 2"
+author: "S. Tinapunan"
+date: "December 16, 2018"
+output: 
+  html_document: 
+    keep_md: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+library(knitr)
+library(psych)
+library(DT)
+library(ggplot2)
+library(reshape2)
+library(gridExtra)
+library(psychometric)
+library(dplyr)
+library(fmsb)
+```
+
+---
+
+## <span style="color:blue"> Part 4: Modeling </span>
+
+Build some type of multiple regression  model and submit your model to the competition board.  Provide your complete model summary and results with analysis. Report your Kaggle.com  user name and score.
+
+<br /> 
+
+### Training Data
+
+Source: https://www.kaggle.com/c/house-prices-advanced-regression-techniques
+
+- No. of observations: 1460
+- No. of attributes: 81
+
+```{r}
+house_data <- read.csv(file="train.csv", header=TRUE, sep=",")
+```
+
+```{r echo=FALSE}
+plot = FALSE
+```
+
+---
+
+### Introduction 
+
+<br /> 
+
+The aim of this project is to create a multiple regression model that predicts the Sale Price of houses in the given data set. This data set has 79 explanatory variables. 
+
+This model uses 17 explanatory variables. Some of these variables are used to generate calculated variables. Below is a list of these. 
+
+<br /> 
+
+-  *Neighborhood*: used to create a new variable *NeighborhoodGroup*. 
+
+-  *YearRemodAdd, YrSold*: used to create a new variable *SinceRemod*. This is the number of years since remodeled at time of sale. The remodeled value is equal to construction year if property was never remodeled. 
+
+- *TotalBsmtSF, X1stFlrSF, X2ndFlrSF, GarageArea, PoolArea*: used to generate a new variable called *OverallArea*. 
+
+- *SaleCondition*: used to create a new variable *IsAbnormalSale*. This is set to 1 when the sale is abnormal (e.g., foreclosures)
+
+- *Functional*: used to create a new variable *IsReduced* when the functional level of the property is not normal. 
+
+- *KitchenQual*: used to create a new variable *KitchenQualGroup* that groups the kitchen into high, medium, and low quality levels. 
+
+- *FireplaceQu*: used to create a new variable *ExcellentFireplace* that flags properties with excellent fireplaces. 
+
+- *GarageQual*: used to create a new variable *ExcellentGarage* that flags properties with excellent garages. 
+
+- *PoolQC*: used to create a new variable *ExcellentPool* that flags properties with excellent pools. 
+
+- *OverallQual*: used to create a new variable *OverallQualityHigh* that flags properties with high overall conditions. 
+
+- *MasVnrArea*
+
+- *CentralAir* 
+
+
+<br /> 
+
+---
+
+### Neighborhood 
+
+We all know that location is one important factor that determines the price of any real estate. So I went ahead and did a linear regression on *Sale Price* by *Neighborhood*. 
+
+<br /> 
+
+```{r}
+m <- lm(SalePrice ~ Neighborhood, data=house_data)
+```
+
+<br /> 
+
+As you can see in the summary below, there are a lot of neighborhoods. In total, there are 25 different neighborhoods. In addition, some of the estimators for the neighborhoods are not really significant; however, a good number of the estimators are significant. The adjusted-R-squared is 0.538, which means that the variable *neighborhood* explains about 50% of the variability in sale price in this single variable regression. 
+
+<br /> 
+
+
+```{r echo=FALSE}
+summary(m)
+```
+
+<br /> 
+
+Based on common knowledge, I know that certain areas are more affordable and others are more expensive. Since I do not have any additional information on which neighborhood would tend to have more affordable and which ones are more expensive, I used the output of the linear regression above to rank the neighborhood based on the values of the estimators. The base group in the estimate is *Blmngtn*.
+
+
+```{r echo=FALSE}
+neighborhood_group <- read.csv(file="neighborhood_group.csv", header=TRUE, sep=",")
+kable(neighborhood_group)
+```
+
+I divided the 25 neighborhoods into 3 groups - A, B, and C. 
+
+
+
+```{r}
+#Neighborhood: NeighborhoodGroup 
+
+house_data$NeighborhoodGroup[house_data$Neighborhood %in% 
+    c('NoRidge',	'NridgHt',	'StoneBr',	'Timber',	'Veenker',	'Somerst')] <- "GroupC"
+
+house_data$NeighborhoodGroup[house_data$Neighborhood %in% 
+    c('ClearCr',	'Crawfor',	'CollgCr',	'Blmngtn',	'Gilbert',	'NWAmes',	'SawyerW')] <- "GroupB"
+
+house_data$NeighborhoodGroup[house_data$Neighborhood %in%
+    c('Mitchel',	'NAmes',	'NPkVill',	'SWISU',	'Blueste',	'Sawyer',	'OldTown',	'Edwards',	
+      'BrkSide',	'BrDale',	'IDOTRR',	'MeadowV')] <- "GroupA"
+```
+
+
+<br /> 
+
+```{r echo=FALSE}
+ggplot(house_data, aes(x=Neighborhood, y=SalePrice)) + geom_boxplot(outlier.colour="blue", outlier.shape=8, outlier.size=4) + 
+  ggtitle("Sale Price and 25 Neighborhoods") + theme(axis.text.x = element_text(angle=45))
+```
+
+<br /> 
+
+```{r echo=FALSE}
+ggplot(house_data, aes(x=NeighborhoodGroup, y=SalePrice)) + geom_boxplot(outlier.colour="blue", outlier.shape=8, outlier.size=4) + 
+  ggtitle(("Sale Price and Neighborhood Groups"))
+```
+
+
+<br /> 
+
+
+Running the linear model on *NeighborhoodGroup*, this is the result: 
+
+```{r}
+summary(lm(SalePrice ~ NeighborhoodGroup, data=house_data))
+```
+
+All base group is *GroupA*, and the estimators for the groups are significant. The adjusted R-squared is 0.4629, which is lower than the previous value of 0.5380. 
+
+
+<br /> 
+
+---
+
+### YearRemodAdd, YrSold
+
+<br /> 
+
+The *YearRemodAdd* is the remodel date, and it is same as construction date if no remodeling or additions. *YrSold* is the year when the property was sold. 
+
+The calculated variable *SinceRemod* is the number of years since the property had remodeling or additions done when at the time it was sold.
+
+
+```{r}
+#YearRemodAdd, YrSold: SinceRemod
+house_data$SinceRemod <- house_data$YrSold - house_data$YearRemodAdd
+```
+
+<br /> 
+
+```{r echo=FALSE}
+ggplot(house_data, aes(x=SinceRemod, y=SalePrice)) + geom_point()+ geom_smooth(method=lm) + ggtitle("Sale price and number of years since remodeling or additions")
+```
+
+<br /> 
+
+As you can, there is an inverse relationship between sale price and number of years since last remodeled (or if never remodeled this is number of years since house was built at time of sale). 
+
+<br /> 
+
+```{r}
+summary(lm(SalePrice ~ NeighborhoodGroup + SinceRemod, data=house_data))
+```
+
+<br /> 
+
+Running the model with *SinceRemod* increases the adjusted R-squared from 0.4629 to 0.4931. All the estimators are significant. 
+
+<br /> 
+
+---
+
+### TotalBsmtSF, X1stFlrSF, X2ndFlrSF, GarageArea, PoolArea
+
+<br /> 
+
+The variables *TotalBsmtSF, X1stFlrSF, X2ndFlrSF, GarageArea, PoolArea* are quantitative variables that measure the area (in square feet) of the basement, first and second floor, garage area, and pool area respectively. A new variable is created called *OverallArea*, which sums the areas of all these spaces. 
+
+<br /> 
+
+```{r}
+#OverallArea: TotalBsmtSF, X1stFlrSF, X2ndFlrSF, GarageArea, PoolArea
+house_data$OverallArea <- house_data$TotalBsmtSF + house_data$X1stFlrSF + house_data$X2ndFlrSF + house_data$GarageArea + house_data$PoolArea
+```
+
+```{r echo=FALSE}
+ggplot(house_data, aes(x=house_data$OverallArea, y=house_data$SalePrice)) + geom_point() + 
+  labs(x="OverallArea", y="Sale Price (USD)", title="Sale Price and Overall Area") + geom_smooth(method=lm) + 
+  ggtitle("Sale Price and Overall Area")
+```
+
+Running the model with *OverallArea* updates the model as follows. 
+
+```{r}
+summary(lm(SalePrice ~ NeighborhoodGroup + SinceRemod + OverallArea, data=house_data))
+```
+
+<br /> 
+
+Including *OverallArea* in the model increased the adjusted R-squared from 0.4931 to 0.7555. All the estimators are significant. 
+
+<br /> 
+
+---
+
+### SaleCondition
+
+<br /> 
+
+The variable *SaleCondition* captures a category level *Abnorml*, which describes an abnormal sale such as trade, foreclosure, and short sale. A new variable *IsAbnormalSale* is created that flags this condition. 
+
+<br /> 
+
+```{r}
+#IsAbnormalSale: SaleCondition when 'Abnorml'
+house_data$IsAbnormalSale[house_data$SaleCondition == "Abnorml"] = 1
+house_data$IsAbnormalSale[house_data$SaleCondition != "Abnorml"] = 0
+```
+
+<br /> 
+
+```{r echo=FALSE}
+ggplot(house_data, aes(x=SaleCondition, y=SalePrice)) + geom_boxplot(outlier.colour="blue", outlier.shape=8, outlier.size=4) + 
+  ggtitle("Sale Price and Sale Condition")
+```
+
+<br /> 
+
+```{r echo=FALSE}
+ggplot(house_data, aes(x=IsAbnormalSale, y=SalePrice)) + geom_boxplot(outlier.colour="blue", outlier.shape=8, outlier.size=4) + 
+  ggtitle("Sale Price and IsAbnormalSale")
+```
+
+<br /> 
+
+Running the model with *IsAbnormalSale* gives the following result. 
+
+<br /> 
+
+```{r}
+summary(lm(SalePrice ~ NeighborhoodGroup + SinceRemod + OverallArea + IsAbnormalSale, data=house_data))
+```
+
+<br /> 
+
+Including *IsAbnormalSale* in the model increased the adjusted R-squared from 0.7555 to 0.7570. All the estimators are significant. 
+
+<br /> 
+
+---
+
+### Functional 
+
+The variable *Functional* describes the functional level of the property. The new variable *IsReduced* flags those properties whose sale price were reduced because of less than normal functional levels. 
+
+<br /> 
+
+
+```{r}
+#IsReduced: Functional
+house_data$IsReduced <- 0
+house_data$IsReduced[house_data$Functional %in% c("Min1", "Min2", "Mod", "Maj1", "Maj2", "Sev", "Sal")] <- 1
+```
+
+<br /> 
+
+```{r echo=FALSE}
+ggplot(house_data, aes(x=Functional, y=SalePrice)) + geom_boxplot(outlier.colour="blue", outlier.shape=8, outlier.size=4) + 
+  ggtitle("Sale Price and Functional")
+```
+
+<br /> 
+
+```{r echo=FALSE}
+ggplot(house_data, aes(x=factor(IsReduced), y=SalePrice)) + geom_boxplot(outlier.colour="blue", outlier.shape=8, outlier.size=4) + 
+  ggtitle("Sale Price and IsReduced")
+```
+
+<br /> 
+
+Running the model with *IsReduced* gives the following result. 
+
+<br /> 
+
+```{r}
+summary(lm(SalePrice ~ NeighborhoodGroup + SinceRemod + OverallArea + IsAbnormalSale + IsReduced, data=house_data))
+```
+
+<br /> 
+
+Including *IsReduced* increased the adjusted R-squared from 0.7570 to 0.7597. All estimators are significant. 
+
+<br /> 
+
+---
+
+### KitchenQual
+
+<br /> 
+
+The variable *KitchenQual* has 5 different category levels. Running the model without modifying this variable yielded some estimators that were not significant. The variable *KitchenQualGroup* collapses the 5 levels into 3 groups of high, medium, and low. 
+
+<br /> 
+
+
+```{r}
+#KitchenQual - KitchenQualGroup
+house_data$KitchenQualGroup[house_data$KitchenQual %in% c('Ex')] <- "High"
+house_data$KitchenQualGroup[house_data$KitchenQual %in% c('Gd')] <- "Medium"
+house_data$KitchenQualGroup[house_data$KitchenQual %in% c('Fa', 'TA', 'Po')] <- "Low"
+house_data$KitchenQualGroup <- factor(house_data$KitchenQualGroup)
+house_data$KitchenQualGroup <- relevel(house_data$KitchenQualGroup, ref="Low")
+```
+
+
+<br /> 
+
+```{r echo=FALSE}
+ggplot(house_data, aes(x=KitchenQual, y=SalePrice)) + geom_boxplot(outlier.colour="blue", outlier.shape=8, outlier.size=4) + 
+  ggtitle("Sale Price and KitchenQual")
+```
+
+<br /> 
+
+```{r echo=FALSE}
+ggplot(house_data, aes(x=KitchenQualGroup, y=SalePrice)) + geom_boxplot(outlier.colour="blue", outlier.shape=8, outlier.size=4) + 
+  ggtitle("Sale Price and KitchenQualGroup")
+```
+
+<br /> 
+
+Running the model with *KitchenQualGroup* gives the following result. 
+
+<br /> 
+
+```{r}
+summary(lm(SalePrice ~ NeighborhoodGroup + SinceRemod + OverallArea + IsAbnormalSale + IsReduced + KitchenQualGroup, data=house_data))
+```
+
+<br /> 
+
+Including *KitchenQualGroup* in the model increased the adjusted R-squared from 0.7597 to 0.7852. All estimators are significant. 
+
+<br /> 
+
+---
+
+### FireplaceQu
+
+<br /> 
+
+The variable *FireplaceQu* describes the quality of the fireplace. In my previous trial and error with categorical variables that have different levels of quality, I find that some of the levels do not have estimators that are significant. I have decided to focus on properties that have excellent fireplaces, and reviewing the plots below properties with excellent fireplaces tend to have higher sale prices. 
+
+The variable *ExcellentFireplace* flags those with excellent fireplaces. 
+
+<br/> 
+
+```{r}
+#FireplaceQu
+house_data$ExcellentFireplace<- 0
+house_data$ExcellentFireplace[house_data$FireplaceQu %in% c('Ex')] <- 1
+```
+
+<br /> 
+
+```{r echo=FALSE}
+ggplot(house_data, aes(x=FireplaceQu, y=SalePrice)) + geom_boxplot(outlier.colour="blue", outlier.shape=8, outlier.size=4) + 
+  ggtitle("Sale Price and FireplaceQu")
+```
+
+<br /> 
+
+```{r echo=FALSE}
+ggplot(house_data, aes(x=factor(ExcellentFireplace), y=SalePrice)) + geom_boxplot(outlier.colour="blue", outlier.shape=8, outlier.size=4) + 
+  ggtitle("Sale Price and ExcellentFireplace")
+```
+
+<br /> 
+
+Running the model with *ExcellentFireplace* gives the following result. 
+
+<br /> 
+
+```{r}
+summary(lm(SalePrice ~ NeighborhoodGroup + SinceRemod + OverallArea + IsAbnormalSale + IsReduced + 
+             KitchenQualGroup + ExcellentFireplace, data=house_data))
+```
+
+<br /> 
+
+Including *ExcellentFireplace* increased the adjusted R-squared from 0.7852 to 0.7871. All estimators are significant. 
+
+<br /> 
+
+---
+
+### GarageQual
+
+<br /> 
+
+The variable *GarageQual* describes the quality of the garage. The variable *ExcellentGarage* flags houses with excellent garages. 
+
+<br /> 
+
+```{r}
+#GarageQual
+house_data$ExcellentGarage <- 0
+house_data$ExcellentGarage[house_data$GarageQual %in% c('Ex')] <- 1
+```
+
+<br /> 
+
+```{r echo=FALSE}
+ggplot(house_data, aes(x=GarageQual, y=SalePrice)) + geom_boxplot(outlier.colour="blue", outlier.shape=8, outlier.size=4) + 
+  ggtitle("Sale Price and GarageQual")
+```
+
+<br /> 
+
+```{r echo=FALSE}
+ggplot(house_data, aes(x=factor(ExcellentGarage), y=SalePrice)) + geom_boxplot(outlier.colour="blue", outlier.shape=8, outlier.size=4) + 
+  ggtitle("Sale Price and ExcellentGarage")
+```
+
+<br /> 
+
+Running the model with *ExcellentGarage* gives the following result. 
+
+<br /> 
+
+```{r}
+summary(lm(SalePrice ~ NeighborhoodGroup + SinceRemod + OverallArea + IsAbnormalSale + IsReduced + 
+             KitchenQualGroup + ExcellentFireplace + ExcellentGarage, data=house_data))
+```
+
+<br /> 
+
+Including *ExcellentGarage* increased the adjusted R-squared from 0.7871 to 0.7883. All estimators are significant. 
+
+<br /> 
+
+---
+
+### PoolQC
+
+<br /> 
+
+The variable *PoolQC* describes the quality of the pool. The new variable *ExcellentPool* flags properties with excellent pools. 
+
+<br /> 
+
+
+```{r echo=FALSE}
+#PoolQC
+house_data$ExcellentPool <- 0
+house_data$ExcellentPool[house_data$PoolQC %in% c('Ex')] <- 1
+```
+
+<br /> 
+
+```{r echo=FALSE}
+ggplot(house_data, aes(x=PoolQC, y=SalePrice)) + geom_boxplot(outlier.colour="blue", outlier.shape=8, outlier.size=4) +
+  ggtitle("Sale Price and PoolQC")
+```
+
+<br /> 
+
+```{r echo=FALSE}
+ggplot(house_data, aes(x=factor(ExcellentPool), y=SalePrice)) + geom_boxplot(outlier.colour="blue", outlier.shape=8, outlier.size=4) +
+  ggtitle("Sale Price and ExcellentPOol")
+```
+
+<br /> 
+
+Running the model with *ExcellentPool* gives the following result. 
+
+```{r}
+summary(lm(SalePrice ~ NeighborhoodGroup + SinceRemod + OverallArea + IsAbnormalSale + IsReduced + 
+             KitchenQualGroup + ExcellentFireplace + ExcellentGarage + ExcellentPool, data=house_data))
+```
+
+Including *ExcellentPool* in the model increased the adjusted R-squared from 0.7883 to 0.7906. All estimators are significant. 
+
+<br /> 
+
+---
+
+### OverallQual, MasVnrArea, CentralAir
+
+<br /> 
+
+The variable *OverallQual* describes the overall quality of the house. This variable has 10 different levels. When I included this variable in the model as is, the estimator was not significant. The different levels are coded as integers. Upon reviewing the box plot of this variable, I noticed a clear trend that houses with better overall quality sold for higher prices. 
+
+The variable *OverallQualityHigh* flags properties with quality scores of 8, 9, and 10. I also tried breaking the 10 different levels into high, medium, and low; however, this resulted in some estimators that were not significant. 
+
+The variable *MasVnrArea* is the veneer area in square feet. 
+
+The variable *CentralAir* indicates if property has central air conditioning or not. 
+
+<br /> 
+
+
+```{r}
+#OverallQual
+house_data$OverallQualityHigh <- 0
+house_data$OverallQualityHigh[house_data$OverallQual %in% c(8,9,10)] <- 1
+```
+
+<br /> 
+
+```{r echo=FALSE}
+ggplot(house_data, aes(x=factor(OverallQual), y=SalePrice)) + geom_boxplot(outlier.colour="blue", outlier.shape=8, outlier.size=4) + 
+  ggtitle("Sale Price and OverallQual")
+```
+
+<br /> 
+
+```{r echo=FALSE}
+ggplot(house_data, aes(x=factor(OverallQualityHigh), y=SalePrice)) + geom_boxplot(outlier.colour="blue", outlier.shape=8, outlier.size=4) + 
+  ggtitle("Sale Price and OverallQualityHigh")
+```
+
+<br /> 
+
+Running the model with *OverallQualityHigh* gives the following result. 
+
+<br /> 
+
+```{r}
+summary(lm(SalePrice ~ NeighborhoodGroup + SinceRemod + OverallArea + IsAbnormalSale + IsReduced + 
+             KitchenQualGroup + ExcellentFireplace + ExcellentGarage + ExcellentPool + 
+              OverallQualityHigh, data=house_data))
+```
+
+<br /> 
+
+Including *OverallQualityHigh* in the model increased the adjusted R-squared from 0.7906 to 0.8015. All estimators are significant. 
+
+<br />
+
+Inculding *MasVnrArea* in the model increased the adjusted R-squared to 0.8048. All estimators are significant. 
+
+<br /> 
+
+```{r}
+summary(lm(SalePrice ~ NeighborhoodGroup + SinceRemod + OverallArea + IsAbnormalSale + IsReduced + 
+             KitchenQualGroup + ExcellentFireplace + ExcellentGarage + ExcellentPool + 
+              OverallQualityHigh + MasVnrArea, data=house_data))
+```
+
+
+
+Lastyly, adding *CentralAir* to the model increased the adjusted R-squared to 0.8065. All estimators are significant. 
+
+```{r}
+model <- lm(SalePrice ~ NeighborhoodGroup + SinceRemod + OverallArea + IsAbnormalSale + IsReduced + 
+             KitchenQualGroup + ExcellentFireplace + ExcellentGarage + ExcellentPool + 
+              OverallQualityHigh + MasVnrArea + CentralAir, data=house_data)
+summary(model)
+```
+
+
+
+<br /> 
+
+The variance inflation factor for the final model is 5.217287. Usually, VIF values under 10 does not suggest multicolinearity. 
+
+
+```{r}
+VIF(model)
+```
+
+<br /> 
+
+```{r echo=FALSE}
+par(mfrow = c(2, 2))
+plot(model)
+```
+
+<br /> 
+
+The residual vs fitted plot shows an approximately horizontal line, which suggests that the relationship is linear. 
+
+The normal Q-Q plot is somewhat approximately normal, which suggests that the residuals are approximately normally distributed; however, the points towards the end of the tail deviate from the line. 
+
+The scale-location plot should show a horizontal line with equally spread points, which is a good indication of homoscedasticity (constant variance of the residuals). This is not the case here. 
+
+In the residual vs leverage plot there are some observations with high leverage. 
+
+---
+
+### Final Model 
+
+<br /> 
+
+This is the function that would predict the sale price.  
+
+<br /> 
+
+<em> 
+
+<b>Predicted Sale Price</b> = 
+  
+  29597.605 + 24363.267(NeighborhoodGroupGroupB) + 42587.343(NeighborhoodGroupGroupC) +  -250.497(SinceRemod) + 
+  
+  37.628(OverallArea) + -17385.937(IsAbnormalSale) + -9549.326(IsReduced) + 46712.205(KitchenQualGroupHigh) + 
+  
+   7982.469(KitchenQualGroupMedium) + 22853.123(ExcellentFireplace) + 61809.474(ExcellentGarage) + 
+  
+   118176.450(ExcellentPool) + 32106.49(OverallQualityHigh) + 29.824(MasVnrArea) + 14439.168(CentralAir)
+  
+</em>
+
+---
+
+### <span style="color:blue"> Kaggle Score</span>
+
+<br /> 
+
+I ran the predictions on the test data and submitted it to Kaggle. 
+
+My score is 0.18037 (root mean squared logarithmic error)
+
+<br /> 
+
+
+![](Kaggle_score2.jpg)
+
+<br /> 
+<br /> 
+
+
+
+
+
+

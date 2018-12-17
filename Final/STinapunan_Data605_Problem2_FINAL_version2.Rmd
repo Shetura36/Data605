@@ -1,0 +1,776 @@
+---
+title: "Data 605 Final - Problem 2"
+author: "S. Tinapunan"
+date: "December 14, 2018"
+output: 
+  html_document: 
+    keep_md: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+library(knitr)
+library(psych)
+library(DT)
+library(ggplot2)
+library(reshape2)
+library(gridExtra)
+library(psychometric)
+library(corrplot)
+library(ggpubr)
+library(matlib)
+library(matrixcalc)
+```
+
+---
+
+## <span style="color:blue"> Part 1: Descriptive and Inferential Statistics </span>
+
+Provide univariate descriptive statistics and appropriate plots for the training data set.  Provide a scatter plot matrix for at least two of the independent variables and the dependent variable. Derive a correlation matrix for any THREE quantitative variables in the data set.  Test the hypotheses that the correlations between each pairwise set of variables is 0 and provide a 80% confidence interval.  Discuss the meaning of your analysis.  Would you be worried about family wise error? Why or why not?
+
+<br/> 
+
+---
+
+#### Load training data set
+
+Source: https://www.kaggle.com/c/house-prices-advanced-regression-techniques
+
+- No. of observations: 1460
+- No. of attributes: 81
+
+```{r}
+training_data <- read.csv(file="train.csv", header=TRUE, sep=",")
+```
+
+<br/> 
+
+#### Preview of training data set
+
+```{r echo=FALSE}
+datatable(head(training_data))
+```
+
+---
+
+<br/>
+
+###  <span style="color:blue">Provide univariate descriptive statistics and appropriate plots for the training data set </span>
+
+<br/> 
+
+The descriptive statistics below gives the minimum, 1st quartile, median, 3rd quartile, max, and number of missing data if any. For categorical data, the summary provides the frequency of the first few levels. Please scroll to the right to view all 81 variables in the training data. 
+
+<br/>
+
+```{r echo=FALSE}
+datatable(data.frame(unclass(summary(training_data[c(2:81)])), check.names = FALSE, stringsAsFactors = TRUE), rownames=FALSE)
+```
+
+The descriptive statistics below comes from the package *psych*, and provides information such as count of values that are not missing, standard deviation, interquartile range, and standard error. By default, categorical variables are converted to numeric. These are marked with `*`. 
+
+Reference: https://www.rdocumentation.org/packages/psych/versions/1.8.10/topics/describe
+
+<br/>
+
+```{r echo=FALSE}
+datatable(psych::describe(training_data, skew=FALSE))
+```
+
+<br/>
+
+#### Visualize dependent varirable Sale Price
+
+<br/>
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+#hist(training_data$SalePrice, xlab="Sale Price", main="Histogram of Sale Price")
+p1 <- ggplot(data = training_data, aes(x = SalePrice)) + geom_histogram()
+p2 <- ggplot(data = training_data, aes(x = SalePrice)) + stat_density()
+grid.arrange(p1, p2, ncol=2)
+
+```
+
+
+
+```{r echo=FALSE}
+summary(training_data$SalePrice)
+```
+
+
+As you can see, the distribution is skewed to the right with some prices that are outliers towards the tail. The minimum sale price is 34,900 USD and the maximum sale price is 755,00 USD. The median sale price is 163,000. 
+
+
+<br/>
+
+#### Visualize distribution of some of the explanatory variables in training set
+
+<br/>
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+melt.training_data <- melt(training_data[c(2:40)])
+ggplot(data = melt.training_data, aes(x = value)) + stat_density() + facet_wrap(~variable, scales = "free")
+#Next
+melt.training_data <- melt(training_data[c(41:57)])
+ggplot(data = melt.training_data, aes(x = value)) + stat_density() + facet_wrap(~variable, scales = "free")
+#Next
+melt.training_data <- melt(training_data[c(58:80)])
+ggplot(data = melt.training_data, aes(x = value)) + stat_density() + facet_wrap(~variable, scales = "free")
+```
+
+---
+
+<br/>
+
+### <span style="color:blue">Provide a scatterplot matrix for at least two of the independent variables and the dependent variable </span>
+
+<br/>
+
+- <b>Dependent variable</b>: Sale Price
+- <b>Selected independent continuous variables</b>: Garage Area, Above Ground Living Area, and Lot Frontage 
+
+<br/>
+
+
+```{r echo=FALSE}
+ggplot(training_data, aes(x=training_data$GarageArea, y=training_data$SalePrice)) + geom_point() + 
+  labs(x="Garage Area (square feet)", y="Sale Price (USD)", title="Sale Price and Garage Area") + 
+  geom_smooth(method=lm) 
+```
+
+
+<br/>
+
+
+```{r echo=FALSE}
+ggplot(training_data, aes(x=training_data$GrLivArea, y=training_data$SalePrice)) + geom_point() + 
+  labs(x="Above Ground Living Area (square feet)", y="Sale Price (USD)", title="Sale Price and Above Ground Living Area") + 
+  geom_smooth(method=lm)
+```
+
+<br/>
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+ggplot(training_data, aes(x=training_data$LotFrontage, y=training_data$SalePrice)) + geom_point() + 
+  labs(x="Lot Frontage (feet)", y="Sale Price (USD)", title="Sale Price and Lot Frontage") + 
+  geom_smooth(method=lm)
+```
+
+The *lot frontage* measures the linear feet of street connected to the property. 
+
+---
+
+<br/>
+
+### <span style="color:blue">Derive a correlation matrix for any THREE quantitative variables in the dataset </span>
+
+<br/>
+
+
+<b> Data for Correlation </b>
+
+The `corr_data` data frame only includes complete cases. 
+
+Each of the variable are continuous. These variables measure area (in square feet) or distance (in feet). 
+
+
+```{r}
+corr_data <- data.frame(training_data$GarageArea, training_data$GrLivArea, training_data$LotFrontage)
+corr_data <- corr_data[complete.cases(corr_data), ]
+colnames(corr_data) <- c("GarageArea", "GrLivArea", "LotFrontage")
+```
+
+<br/> 
+
+### Assumptions of Pearson Correlation
+
+The Pearson correlation assumes that each of the variables are continuous, each observation is complete (no missing data), there are no outliers in each variable, and relationship between variables is linear and homoscedastic. Missing data were removed from `corr_data`. Below investigates the other assumptions. 
+
+<br/>
+
+#### Linear Relationship: Scatterplot of the Variables 
+
+The plots below show a linear relationship. I do not observe any noticeable curved patterns. 
+
+<br/> 
+
+```{r echo=FALSE}
+g1 <- ggscatter(corr_data, x = "GarageArea", y = "GrLivArea", 
+          add = "reg.line", conf.int = TRUE, 
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "Garage Area (square feet)", ylab = "Above Ground Living Area (square feet)")
+
+g2 <- ggscatter(corr_data, x = "GarageArea", y = "LotFrontage", 
+          add = "reg.line", conf.int = TRUE, 
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "Garage Area (square feet)", ylab = "Lot Frontage (feet)")
+
+
+g3 <- ggscatter(corr_data, x = "GrLivArea", y = "LotFrontage", 
+          add = "reg.line", conf.int = TRUE, 
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "Above Ground Living Area (square feet)", ylab = "Lot Frontage (feet)")
+```
+
+<b> Garage Area and Above Ground Living Area </b>
+
+```{r echo=FALSE}
+g1
+```
+
+<b> Garage Area and Lot Frontage </b>
+
+```{r echo=FALSE}
+g2
+```
+
+
+<b> Above Ground Living Area and Lot Frontage </b>
+
+```{r echo=FALSE}
+g3
+```
+
+<br/>
+
+#### Normality 
+
+One of the assumptions of the Pearson correlation is that the data has a normal distribution. 
+
+The Shapiro-wilk normality test for *Garage Area* has a p-value much less than 0.05, which suggests that the distribution of this data is not normal. If the null hypothesis that the distribution is normal were true, then the probability of finding this observed data is 2.195e-12 (reject H0). 
+
+```{r}
+shapiro.test(corr_data$GarageArea)
+```
+
+The Shapiro-wilk normality test for *Above Ground Living Area* has a p-value that is much less than 0.05, which suggests that the distribution of this data is not normal. If the null hypothesis that the distribution is normal were true, then the probability of finding this observed data is 2.2e-16 (reject H0). 
+
+```{r}
+shapiro.test(corr_data$GrLivArea)
+```
+
+The Shapiro-wilk normality test for *Log Frontage* has a p-value that is much less than 0.05, which suggests that the distribution of this data is not normal. If the null hypothesis that the distribution is normal were true, then the probability of finding this observed data is 2.2e-16 (reject H0). 
+
+
+```{r}
+shapiro.test(corr_data$LotFrontage)
+```
+
+Below is a visual representation of the q-q plots of each of the variable. 
+
+```{r}
+q1 <- ggqqplot(corr_data$GarageArea, ylab = "Garage Area")
+q2 <- ggqqplot(corr_data$GrLivArea, ylab = "Above Ground Area")
+q3 <- ggqqplot(corr_data$LotFrontage, ylab = "Lot Frontage")
+grid.arrange(q1, q2, q3, nrow=2, ncol=2)
+```
+
+<br/>
+
+#### Linearity and Homoscedasticity
+
+<br/>
+
+The Pearson correlation assumes linear relationship and homoscedasticity (homogeneity of variance). 
+
+A *Residual vs Fitted* plot that shows a horizontal red line that is close to zero suggests that the relationship is linear. 
+
+A *Scale-location* plot that shows a horizontal red line with points approximately equally spread out suggests a constant variance in the residual errors (homoscedasticity).
+
+Overall I think that there is a linear relationship between the variables; however, there are some outliers that is causing the line in the *Residual vs Fitted* plots to deviate a lot more. 
+
+Overall, I think that the variance in the residual errors is somewhat constant. The residuals appear to be equally spread out.
+
+<br/>
+
+<b> Garage Area and Above Ground Living Area </b>
+
+
+```{r echo=FALSE}
+model <- lm(GarageArea ~ GrLivArea, data = corr_data)
+par(mfrow = c(2, 1))
+plot(model, c(1,3))
+```
+
+
+<b> Garage Area and Lot Frontage </b>
+
+
+```{r echo=FALSE}
+model <- lm(GarageArea ~ LotFrontage, data = corr_data)
+par(mfrow = c(2, 1))
+plot(model, c(1,3))
+```
+
+<b> Above Ground Living Area and Lot Frontage </b>
+
+
+```{r echo=FALSE}
+model <- lm(GrLivArea ~ LotFrontage, data = corr_data)
+par(mfrow = c(2, 1))
+plot(model,c(1,3))
+```
+
+Reference: http://www.sthda.com/english/articles/39-regression-model-diagnostics/161-linear-regression-assumptions-and-diagnostics-in-r-essentials
+
+<br/>
+
+#### Correlation Matrix
+
+The Pearson correlation is calculated by the  *cor* function calculates the correlation of each variable to one another. The assumptions of the Pearson correlations were investigated above. 
+
+
+```{r}
+cor <- cor(corr_data, method = "pearson", use = "complete.obs") 
+kable(cor)
+```
+
+
+<br/>
+
+### <span style="color:blue">Test the hypotheses that the correlations between each pairwise set of variables is 0 </span>
+
+<br/>
+
+- H0: The correlation is zero. 
+- H1: The correlation is not zero. 
+- Significance level is 0.05. 
+
+The *cor.test* function of the *ggpubr* package is used to perform the hypothesis tests. 
+
+<br/>
+
+```{r}
+corr_GarageArea_GrLivArea <- cor.test(corr_data$GarageArea, corr_data$GrLivArea, method = "pearson")
+corr_Garagearea_LotFrontage <- cor.test(corr_data$GarageArea, corr_data$LotFrontage , method = "pearson")
+corr_GrLivArea_LotFrontage <- cor.test(corr_data$GrLivArea, corr_data$LotFrontage , method = "pearson")
+```
+
+<br/>
+
+<b>Results for *Garage Area* and *Above Ground Living Area* </b>
+
+The correlation coefficient is 0.4737098, which is found to be significant with p-value (< 2.2e-16) that is much less than the significance level of 0.05. If the null hypothesis were true (correlation is zero), the probability of this observed data is < 2.2e-16. This is evidence to reject the null hypothesis and accept the alternative that the correlation is not zero. 
+
+
+```{r}
+corr_GarageArea_GrLivArea
+```
+
+<br/>
+
+<b> Results for *Garage Area* and *Lot Frontage* </b>
+
+The correlation coefficient is 0.3449967, which is found to be significant with p-value (< 2.2e-16) that is much less than the significance level of 0.05. If the null hypothesis were true (correlation is zero), the probability of this observed data is < 2.2e-16. This is evidence to reject the null hypothesis and accept the alternative that the correlation is not zero. 
+
+
+```{r}
+corr_Garagearea_LotFrontage
+```
+
+<br/>
+
+<b> Results for *Above Ground Living Area* and *Lot Frontage* </b>
+
+The correlation coefficient is 0.4491302, which is found to be significant with p-value (< 2.2e-16) that is much less than the significance level of 0.05. If the null hypothesis were true (correlation is zero), the probability of this observed data is < 2.2e-16. This is evidence to reject the null hypothesis and accept the alternative that the correlation is not zero. 
+
+```{r}
+corr_GrLivArea_LotFrontage
+```
+
+<br/>
+
+### <span style="color:blue"> Provide a 80% confidence interval </span>
+
+<br/>
+
+The *CIr* function of the *Psychometric* package is used to calculate the 80% confidence interval. 
+
+
+```{r}
+corr_data_n <- nrow(corr_data)
+```
+
+<br/>
+
+#### 80% confidence interval of the correlation between *GarageArea* and *GrLivArea*. 
+
+As you can see *zero* does not fall within the range [0.4444933, 0.5019195]. 
+
+```{r}
+CIr(r=corr_GarageArea_GrLivArea$estimate , n = corr_data_n, level = .80)
+```
+
+<br/>
+
+#### 80% confidence interval of the correlation between *GarageArea* and *LotFrontage*. 
+
+As you can see *zero* does not fall within the range [0.3119708, 0.3771899]. 
+
+```{r}
+CIr(r=corr_Garagearea_LotFrontage$estimate , n = corr_data_n, level = .80)
+```
+
+<br/>
+
+#### 80% confidence interval of the correlation between *GrLivArea* and *LotFrontage*. 
+
+As you can see *zero* does not fall within the range [0.3713236, 0.4333466]
+
+```{r}
+CIr(r=corr_GrLivArea_LotFrontage$estimate , n = corr_data_n, level = .80)
+```
+
+<br/>
+
+### <span style="color:blue">Discuss the meaning of your analysis. Would you be worried about familywise error? Why or why not?</span>
+
+<br/>
+
+The variables have positive correlation values that range from 0.34 to 0.47 (weak to moderate), and the correlation coefficients were found to be significant. Garage Area and Above Ground Living Area has the strongest correlation at 0.47. Garage Area and Lot Frontage has the weakest correlation at 0.34. 
+
+Houses that have big garages tend to have big above ground living spaces and longer street distance connected to their property. And houses that have big above ground living space tend to have longer distance of street connected to their property.
+
+<br/>
+
+```{r echo=FALSE}
+kable(cor)
+```
+
+```{r echo=FALSE}
+corrplot(cor, type = "upper", order = "hclust", 
+         tl.col = "black", tl.srt = 45)
+```
+
+<br/>
+
+#### Considering Familywise Error Rate
+
+<br/>
+
+The familywise error rate needs to be considered when multiple statistical analyses are conducted on *the same* data. For this pairwise correlation of 3 variables, a total of 3 different comparisons were made. The significance level was set to 0.05 per analysis, which means that there is a 5% chance of committing a Type I error. Type I error happens when the null hypothesis is rejected when in fact it is true in the population. This 5% Type I error rate is only for a single analysis. When multiple analyses are made, we need to consider the familywise error rate. This is the overall Type I error rate of the multiple comparisons, which is known to be larger than the per analysis error rate.
+
+The formula for calculating the familywise error rate is *1 - (1 - alpha)^k* , where alpha is the significance level and k is the number of comparisons. 
+
+The familywise error rate in this case is 0.142625. This means the probability of committing at least one Type I error is 14.26%. 
+
+```{r}
+k <- 3
+alpha <- .05
+1 - (1-alpha)^k
+```
+
+To control the familywise error rate, a common technique is to perform a *Bonferroni* correction. This simple approach adjusts alpha by dividing it by the number of comparisons. In this case, the adjusted alpha would be .05/3 or around 0.017. The p-values of the results would then need to be less than 0.017 in order for the null hypothesis to be rejected. This adjustment controls for the overall Type I error rate of the family of analyses to 0.05.
+
+Below are the p-values of the analyses, and all are less than 0.017. This is evidence to reject the null hypothesis that the correlation is zero. 
+
+```{r echo=FALSE}
+d <- data.frame(cbind(c('GarageArea-GrLivArea', 'GarageArea-GrLivArea', 'GrLivArea-LotFrontage'),
+c(corr_GarageArea_GrLivArea$p.value, corr_Garagearea_LotFrontage$p.value, corr_GrLivArea_LotFrontage$p.value), c("less than 0.017", "less than 0.017", "less than 0.017")))
+colnames(d) <- c("Comparisons", "P-value", "Compare to adjusted P-value")
+kable(d)
+```
+
+Since we are doing multiple analyses on the same data, I would consider controlling for the familywise error rate. 
+
+
+Reference: https://www.youtube.com/watch?v=rMuNniCTsOw
+
+<br/> 
+
+---
+
+## <span style="color:blue">Part 2: Linear Algebra and Correlation<span> 
+
+Invert your 3 x 3 correlation matrix from above. (This is known as the precision matrix and contains variance inflation factors on the diagonal.) Multiply the correlation matrix by the precision matrix, and then multiply the precision matrix by the correlation matrix. Conduct LU decomposition on the matrix.
+
+---
+
+<br/> 
+
+
+<b>`cor_matrix` is the 3 X 3 matrix of the correlation coefficients</b>
+
+```{r}
+cor_matrix <- data.matrix(cor)
+rownames(cor_matrix) <- c()
+colnames(cor_matrix) <- c()
+cor_matrix
+```
+
+
+<br /> 
+
+#### <span style="color:blue">Precision Matrix: invert your 3 x 3 correlation matrix</span>
+
+<br /> 
+
+The determinant of the correlation matrix is not zero. This means that this matrix has an inverse. 
+
+```{r}
+det(cor_matrix)
+```
+
+
+The *inv* function from the *matlib* package is used to generate the inverse of the correlation matrix. 
+
+```{r}
+precision_matrix <- inv(cor_matrix)
+precision_matrix
+```
+
+
+<br /> 
+
+####<span style="color:blue"> Multiply the correlation matrix by the precision matrix </span>
+
+<br /> 
+
+The operator `%*%` performs the matrix multiplication. 
+
+```{r}
+result1 <- cor_matrix %*% precision_matrix
+result1
+```
+
+We expect to get the identity matrix; however, at first glance it does not look like it is the identity matrix. The off diagonal values are very tiny. We can use the *zapsmall* function to round very small values to zero. 
+
+```{r}
+result1 <- zapsmall(result1)
+result1
+```
+
+
+<br /> 
+
+#### <span style="color:blue">Multiply the precision matrix by the correlation matrix</span> 
+
+<br /> 
+
+As expected, multiplying the precision matrix by the correlation matrix also results in the identity matrix. 
+
+```{r}
+result2 <- zapsmall(precision_matrix %*% cor_matrix)
+result2
+```
+
+<br /> 
+
+#### <span style="color:blue">Conduct LU decomposition on the matrix</span> 
+
+<br /> 
+
+The function *lu.decomposition* is used from the *matrixcalc* package. 
+
+
+```{r}
+lu_decomp <- lu.decomposition(cor_matrix)
+```
+
+<br /> 
+
+<b> The lower triangular matrix L </b> 
+
+```{r}
+L <- lu_decomp$L
+L
+```
+
+<br /> 
+
+<b>The upper triangular matrix U</b> 
+
+```{r}
+U <- lu_decomp$U
+U
+```
+
+<br /> 
+
+Multiplying L and U should result in the correlation matrix. 
+
+```{r}
+L %*% U
+```
+
+<br /> 
+
+As you can see, LU is equivalent to the `cor_matrix`. 
+
+```{r}
+cor_matrix
+```
+
+
+<br /> 
+
+References: https://cran.r-project.org/web/packages/matlib/vignettes/inv-ex1.html, https://www.youtube.com/watch?v=UlWcofkUDDU&t=350s 
+
+<br /> 
+
+
+---
+
+## <span style="color:blue">Part 3: Calculus-Based Probability & Statistics</span>
+
+Many times, it makes sense to fit a closed form distribution to data.  Select a variable in the Kaggle.com training data set that is skewed to the right, shift it so that the minimum value is absolutely above zero if necessary.  Then load the MASS package and run fitdistr to fit an exponential probability density function.  (See  https://stat.ethz.ch/R-manual/R-devel/library/MASS/html/fitdistr.html ).  Find the optimal value of  for this distribution, and then take 1000 samples from this exponential distribution using this value (e.g., rexp(1000, )).  Plot a histogram and compare it with a histogram of your original variable.   Using the exponential pdf, find the 5th and 95th percentiles using the cumulative distribution function (CDF).   Also generate a 95% confidence interval from the empirical data, assuming normality.  Finally, provide the empirical 5th percentile and 95th percentile of the data. Discuss.
+
+---
+
+<br /> 
+
+#### <span style="color:blue">Select a variable in the training dataset that is skewed to the right, shift it so that the minimum value is absolutely above zero if necessary.</span> 
+
+<br /> 
+
+I selected the variable *MasVnrArea*.
+
+The *MasVnArea* is the masonry veneer area measured in square feet. 
+ 
+ 
+```{r}
+fit_data <- training_data$MasVnrArea
+fit_data <- fit_data[complete.cases(fit_data)]
+```
+
+<br /> 
+
+As you can see, the distribution is skewed to the right. 
+
+```{r}
+hist(fit_data)
+```
+
+
+<br /> 
+
+As you can see, we have values that are zeroes. This would represent houses that do not have masonry veneers. The total number of observations is 1452.
+
+```{r echo=FALSE}
+summary(fit_data)
+psych::describe(fit_data, skew=FALSE)
+```
+
+Out of the 1452 houses, there are 861 that have no masonry veneers (area is zero). 
+
+```{r}
+length(fit_data[fit_data == 0])
+```
+
+Because the data measures area, adding a value of .01 should be negligible and would get rid of the zero values. A property with a masonry veneer area of .01 square feet would mean this property does not really have any masonry veneer. 
+
+```{r}
+fit_data <- fit_data + .01
+```
+
+Below is the updated histogram and summary after the adjustment.  
+
+```{r echo=FALSE}
+hist(fit_data)
+summary(fit_data)
+psych::describe(fit_data, skew=FALSE)
+```
+
+<br /> 
+
+
+####<span style="color:blue">Load the MASS package and run fitdistr to fit an exponential probability density function.</span> 
+
+```{r}
+library(MASS)
+fit <- fitdistr(fit_data, densfun="exponential")
+```
+
+<br /> 
+
+####<span style="color:blue">Find the optimal value for this distribution, and then take 1000 samples from this exponential distribution using this value (e.g., `rexp(1000,)`).  Plot a histogram and compare it with a histogram of your original variable.</span> 
+
+
+<br /> 
+
+<b>Optimal value for the fitted distribution</b> 
+
+```{r}
+fit$estimate
+```
+
+<br /> 
+
+<b>Generate exponential distribution with the same rate</b> 
+
+```{r}
+exp_dist <- rexp(length(fit_data), rate = fit$estimate) 
+```
+
+<br /> 
+
+<b> Histogram of fitted data </b> 
+
+```{r echo=FALSE}
+hist(fit_data)
+```
+
+<br /> 
+
+<b> Histogram of exponentially distributed data with same rate as fitted data </b> 
+
+```{r echo=FALSE}
+hist(exp_dist)
+```
+
+The histogram of `fit_data` and `exp_dist` have similar general shape; however, the first bin of `fit_data` has a frequency that is about double the frequency of `exp_data`. Both have the same count, but the distribution of the frequency is not similar. 
+
+<br /> 
+
+#### <span style="color:blue">Using the exponential pdf, find the 5th and 95th percentiles using the cumulative distribution function (CDF).</span> 
+
+<br /> 
+
+```{r}
+qexp(.05, rate=fit$estimate)
+qexp(.95, rate=fit$estimate)
+```
+
+<br /> 
+
+#### <span style="color:blue"> Generate a 95% confidence interval from the empirical data, assuming normality.</span> 
+
+<br /> 
+
+This is a function that calculates the confidence interval assuming normality. 
+
+```{r}
+norm.interval = function(data, variance = var(data), conf.level = 0.95) 
+{
+      z = qnorm((1 - conf.level)/2, lower.tail = FALSE)
+      xbar = mean(data)
+      sdx = sqrt(variance/length(data))
+      c(xbar - z * sdx, xbar + z * sdx)
+}
+```
+
+Reference: https://www.stat.wisc.edu/~yandell/st571/R/append7.pdf 
+
+<br /> 
+
+<b>95% confidence interval of the mean of the empirical data</b> 
+
+```{r}
+norm.interval(fit_data, variance=var(fit_data), conf.level = 0.95)
+```
+
+<br /> 
+
+#### <span style="color:blue">Provide the empirical 5th percentile and 95th percentile of the data.</span> 
+
+<br /> 
+
+```{r}
+quantile(x=fit_data, probs=c(.05, .95))
+```
+
+<br /> 
